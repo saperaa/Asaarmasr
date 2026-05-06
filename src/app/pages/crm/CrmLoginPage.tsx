@@ -21,9 +21,7 @@ export function CrmLoginPage() {
       return;
     }
     setLoading(true);
-    // Simulate async check
-    await new Promise((r) => setTimeout(r, 400));
-    const ok = crmLogin(email.trim(), password);
+    const ok = await crmLogin(email.trim(), password);
     setLoading(false);
     if (ok) {
       navigate("/crm/dashboard");

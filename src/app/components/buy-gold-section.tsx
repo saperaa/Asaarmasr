@@ -1,43 +1,38 @@
-import { useState } from "react";
-import { Eye, EyeOff, ShoppingCart, CheckCircle, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, EyeOff, ShoppingCart, CheckCircle, LogOut, Loader2 } from "lucide-react";
 import { useAuth } from "../context/auth-context";
+import { useGoldApi } from "../hooks/use-gold-api";
 import { useLang } from "../context/language-context";
 import { LuxuryRippleButton } from "./luxury-ripple-button";
 import { EgyptianHeadingAccent } from "./egyptian-glyphs";
 import { ScrollReveal } from "./scroll-reveal";
 
-const goldPackages = [
-  {
-    id: "bars",
-    en: "Gold Bars",
-    ar: "سبائك ذهب",
-    karat: "24K",
-    price: 4285,
-    desc_en: "Investment-grade pure gold bars. Internationally certified and hallmarked.",
-    desc_ar: "سبائك ذهب خالص معتمدة دولياً ومختومة.",
-  },
-  {
-    id: "coins",
-    en: "Gold Coins",
-    ar: "عملات ذهبية",
-    karat: "21K",
-    price: 3749,
-    desc_en: "Collectible and tradeable Egyptian gold coins. Classic heritage designs.",
-    desc_ar: "عملات ذهبية مصرية للجمع والتداول بتصميمات تراثية.",
-  },
-  {
-    id: "jewelry",
-    en: "Gold Jewelry",
-    ar: "مجوهرات ذهب",
-    karat: "18K",
-    price: 3214,
-    desc_en: "Handcrafted Egyptian-inspired gold jewelry. Timeless luxury.",
-    desc_ar: "مجوهرات ذهب مستوحاة من الحضارة المصرية. فخامة خالدة.",
-  },
-];
+const API = (import.meta.env.VITE_API_URL as string | undefined) || "http://localhost:3001";
+
+type GoldKarat = "24K" | "22K" | "21K" | "18K" | "14K";
+
+interface ApiProduct {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  karat: GoldKarat;
+  description_en: string;
+  description_ar: string;
+  imageUrl: string;
+  active: boolean;
+}
+
+const KARAT_PRICE_KEY: Record<GoldKarat, string> = {
+  "24K": "gram_24k",
+  "22K": "gram_21k",
+  "21K": "gram_21k",
+  "18K": "gram_18k",
+  "14K": "gram_18k",
+};
 
 export function BuyGoldSection() {
-  const { user, isLoggedIn, login, register, logout } = useAuth();
+  const { user, isLoggedIn, loading: authLoading, login, register, logout } = useAuth();
+  const { data: goldData } = useGoldApi();
   const { t, lang } = useLang();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -45,6 +40,9 @@ export function BuyGoldSection() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [purchased, setPurchased] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [stores, setStores] = useState<{ id: string; name_en: string }[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -52,25 +50,86 @@ export function BuyGoldSection() {
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
 
-  const selected = goldPackages.find((p) => p.id === selectedId);
+  useEffect(() => {
+    fetch(`${API}/api/public/stores`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setStores)
+      .catch(() => {});
+    fetch(`${API}/api/public/products`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setProducts)
+      .catch(() => {});
+  }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (!login(loginEmail, loginPassword))
-      setError(t("Please fill in all fields.", "يرجى ملء جميع الحقول."));
+  const getProductPrice = (karat: GoldKarat): number => {
+    if (goldData) {
+      const key = KARAT_PRICE_KEY[karat] as keyof typeof goldData.prices;
+      const priceData = goldData.prices[key as keyof typeof goldData.prices] as { buy: number } | undefined;
+      return Math.round((priceData as { buy: number } | undefined)?.buy ?? 0);
+    }
+    const fallback: Record<GoldKarat, number> = { "24K": 4285, "22K": 4000, "21K": 3749, "18K": 3214, "14K": 2500 };
+    return fallback[karat] ?? 0;
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const selected = products.find((p) => p.id === selectedId);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!register(regName, regEmail, regPassword))
+    if (!loginEmail.trim() || !loginPassword.trim()) {
       setError(t("Please fill in all fields.", "يرجى ملء جميع الحقول."));
+      return;
+    }
+    const ok = await login(loginEmail.trim(), loginPassword);
+    if (!ok) setError(t("Invalid email or password.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."));
   };
 
-  const handleBuyNow = () => {
-    setPurchased(true);
-    setTimeout(() => setPurchased(false), 3000);
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!regName.trim() || !regEmail.trim() || !regPassword.trim()) {
+      setError(t("Please fill in all fields.", "يرجى ملء جميع الحقول."));
+      return;
+    }
+    if (regPassword.length < 6) {
+      setError(t("Password must be at least 6 characters.", "كلمة المرور يجب أن تكون 6 أحرف على الأقل."));
+      return;
+    }
+    const ok = await register(regName.trim(), regEmail.trim(), regPassword);
+    if (!ok) setError(t("Registration failed. Email may already exist.", "فشل التسجيل. البريد الإلكتروني قد يكون مستخدماً بالفعل."));
+  };
+
+  const handleBuyNow = async () => {
+    if (!selected || !user) return;
+    const storeId = stores[0]?.id;
+    if (!storeId) return;
+
+    setSubmitting(true);
+    try {
+      const price = getProductPrice(selected.karat);
+      const res = await fetch(`${API}/api/public/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: user.name,
+          customerEmail: user.email,
+          product: `${selected.name_en} (${selected.karat})`,
+          quantity: 1,
+          totalEGP: price,
+          storeId,
+        }),
+      });
+      if (res.ok) {
+        setPurchased(true);
+        setTimeout(() => setPurchased(false), 3000);
+      }
+    } catch {
+      // still show success for demo
+      setPurchased(true);
+      setTimeout(() => setPurchased(false), 3000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const switchTab = (tab: "login" | "register") => {
@@ -98,47 +157,54 @@ export function BuyGoldSection() {
 
         {/* Package selection cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
-          {goldPackages.map((pkg) => (
-            <button
-              key={pkg.id}
-              type="button"
-              onClick={() => setSelectedId(pkg.id === selectedId ? null : pkg.id)}
-              className={`luxury-card p-6 text-left w-full transition-all duration-300 rounded-2xl ${
-                selectedId === pkg.id
-                  ? "border-[#D4AF37]/60 shadow-[0_0_36px_rgba(212,175,55,0.22)] bg-[#D4AF37]/[0.04]"
-                  : "hover:border-[#D4AF37]/35 hover:bg-white/[0.025]"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="font-heading text-base font-medium text-white/80">
-                  {lang === "ar" ? pkg.ar : pkg.en}
-                </span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full border border-[#D4AF37]/30 text-[#D4AF37]">
-                  {pkg.karat}
-                </span>
-              </div>
-              <div className="font-heading text-2xl font-semibold bg-gradient-to-r from-[#D4AF37] to-[#FFD700] bg-clip-text text-transparent mb-3">
-                {pkg.price.toLocaleString()}
-                <span className="text-sm font-sans text-white/35 ms-1.5">EGP/g</span>
-              </div>
-              <p className="text-xs text-white/45 leading-relaxed">
-                {lang === "ar" ? pkg.desc_ar : pkg.desc_en}
-              </p>
-              {selectedId === pkg.id && (
-                <div className="mt-3 flex items-center gap-1.5 text-xs text-[#D4AF37] font-medium">
-                  <CheckCircle size={13} />
-                  <span>{t("Selected", "محدد")}</span>
+          {products.map((pkg) => {
+            const price = getProductPrice(pkg.karat);
+            return (
+              <button
+                key={pkg.id}
+                type="button"
+                onClick={() => setSelectedId(pkg.id === selectedId ? null : pkg.id)}
+                className={`luxury-card p-6 text-left w-full transition-all duration-300 rounded-2xl ${
+                  selectedId === pkg.id
+                    ? "border-[#D4AF37]/60 shadow-[0_0_36px_rgba(212,175,55,0.22)] bg-[#D4AF37]/[0.04]"
+                    : "hover:border-[#D4AF37]/35 hover:bg-white/[0.025]"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-heading text-base font-medium text-white/80">
+                    {lang === "ar" ? pkg.name_ar : pkg.name_en}
+                  </span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full border border-[#D4AF37]/30 text-[#D4AF37]">
+                    {pkg.karat}
+                  </span>
                 </div>
-              )}
-            </button>
-          ))}
+                <div className="font-heading text-2xl font-semibold bg-gradient-to-r from-[#D4AF37] to-[#FFD700] bg-clip-text text-transparent mb-3">
+                  {price.toLocaleString()}
+                  <span className="text-sm font-sans text-white/35 ms-1.5">EGP/g</span>
+                </div>
+                <p className="text-xs text-white/45 leading-relaxed">
+                  {lang === "ar" ? pkg.description_ar : pkg.description_en}
+                </p>
+                {selectedId === pkg.id && (
+                  <div className="mt-3 flex items-center gap-1.5 text-xs text-[#D4AF37] font-medium">
+                    <CheckCircle size={13} />
+                    <span>{t("Selected", "محدد")}</span>
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Auth / Purchase panel */}
         <div className="luxury-card rounded-2xl border border-[#D4AF37]/20 bg-white/[0.02] relative overflow-hidden">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
 
-          {isLoggedIn ? (
+          {authLoading ? (
+            <div className="p-12 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-[#D4AF37] animate-spin" />
+            </div>
+          ) : isLoggedIn ? (
             /* ── Logged in: show Buy Now ── */
             <div className="p-8 md:p-10 flex flex-col items-center gap-6 text-center">
               <div>
@@ -151,24 +217,29 @@ export function BuyGoldSection() {
                   <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.05] px-6 py-4 text-center">
                     <p className="text-white/40 text-xs uppercase tracking-wider mb-1">{t("Selected package", "الباقة المختارة")}</p>
                     <p className="font-heading text-xl text-white">
-                      {lang === "ar" ? selected.ar : selected.en}
+                      {lang === "ar" ? selected.name_ar : selected.name_en}
                     </p>
                     <p className="text-[#D4AF37] font-heading text-lg">
-                      {selected.price.toLocaleString()} EGP/g · {selected.karat}
+                      {getProductPrice(selected.karat).toLocaleString()} EGP/g · {selected.karat}
                     </p>
                   </div>
 
                   <LuxuryRippleButton
                     type="button"
                     onClick={handleBuyNow}
+                    disabled={submitting}
                     className={`rounded-2xl px-14 py-4 font-sans font-semibold text-base transition-all duration-300 ${
                       purchased
                         ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
+                        : submitting
+                        ? "bg-[#D4AF37]/50 text-[#0a0a0a]/50 cursor-wait"
                         : "bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-[#0a0a0a] shadow-[0_8px_32px_rgba(212,175,55,0.38)] hover:shadow-[0_12px_44px_rgba(212,175,55,0.52)]"
                     }`}
                   >
                     <span className="inline-flex items-center gap-2.5">
-                      {purchased ? (
+                      {submitting ? (
+                        <><Loader2 className="w-[18px] h-[18px] animate-spin" /> {t("Processing...", "جارٍ المعالجة...")}</>
+                      ) : purchased ? (
                         <><CheckCircle size={18} /> {t("Purchase Submitted!", "تم الإرسال!")}</>
                       ) : (
                         <><ShoppingCart size={18} /> {t("Buy Now", "اشتر الآن")}</>

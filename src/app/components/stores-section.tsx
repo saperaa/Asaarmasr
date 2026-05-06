@@ -1,12 +1,22 @@
+import { useEffect, useState } from "react";
 import { MapPin, Phone, Store } from "lucide-react";
-import { useCrm } from "../context/crm-context";
 import { useLang } from "../context/language-context";
 import { ScrollReveal } from "./scroll-reveal";
 import { EgyptianHeadingAccent } from "./egyptian-glyphs";
+import type { Store as StoreType } from "../context/crm-context";
+
+const API = (import.meta.env.VITE_API_URL as string | undefined) || "http://localhost:3001";
 
 export function StoresSection() {
-  const { stores } = useCrm();
   const { t, isAr } = useLang();
+  const [stores, setStores] = useState<StoreType[]>([]);
+
+  useEffect(() => {
+    fetch(`${API}/api/public/stores`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setStores)
+      .catch(() => {});
+  }, []);
 
   const activeStores = stores.filter((s) => s.active);
 

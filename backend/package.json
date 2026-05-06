@@ -1,0 +1,24 @@
+{
+  "name": "asaarmasr-backend",
+  "version": "1.0.0",
+  "description": "Node.js backend for Asaar Masr CRM",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "admin": "node src/admin-server.mjs"
+  },
+  "dependencies": {
+    "@adminjs/express": "^6.1.1",
+    "@adminjs/mongoose": "^4.1.0",
+    "adminjs": "^7.8.17",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-session": "^1.19.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.6.1"
+  }
+}

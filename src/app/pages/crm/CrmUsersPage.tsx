@@ -34,13 +34,15 @@ export function CrmUsersPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    addCrmUser(form);
-    setForm(EMPTY_FORM);
-    setErrors({});
-    setShowAdd(false);
+    try {
+      await addCrmUser(form);
+      setForm(EMPTY_FORM);
+      setErrors({});
+      setShowAdd(false);
+    } catch { /* error handled by context */ }
   };
 
   const inputClass = (err?: string) =>
@@ -279,7 +281,7 @@ export function CrmUsersPage() {
                 Cancel
               </button>
               <button
-                onClick={() => { deleteCrmUser(confirmDelete); setConfirmDelete(null); }}
+                onClick={async () => { await deleteCrmUser(confirmDelete); setConfirmDelete(null); }}
                 className="flex-1 rounded-xl bg-red-500/80 hover:bg-red-500 py-2.5 text-sm font-semibold text-white transition-all"
               >
                 Remove

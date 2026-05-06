@@ -24,7 +24,7 @@ function StoreFormModal({
   title,
 }: {
   initial: FormData;
-  onSave: (data: FormData) => void;
+  onSave: (data: FormData) => void | Promise<void>;
   onClose: () => void;
   title: string;
 }) {
@@ -159,21 +159,27 @@ export function CrmStoresPage() {
   const [editStore, setEditStore] = useState<StoreType | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const handleAdd = (data: FormData) => {
-    addStore(data);
-    setShowAdd(false);
+  const handleAdd = async (data: FormData) => {
+    try {
+      await addStore(data);
+      setShowAdd(false);
+    } catch { /* error handled by context */ }
   };
 
-  const handleEdit = (data: FormData) => {
+  const handleEdit = async (data: FormData) => {
     if (editStore) {
-      updateStore(editStore.id, data);
-      setEditStore(null);
+      try {
+        await updateStore(editStore.id, data);
+        setEditStore(null);
+      } catch { /* error handled by context */ }
     }
   };
 
-  const handleDelete = (id: string) => {
-    deleteStore(id);
-    setConfirmDelete(null);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteStore(id);
+      setConfirmDelete(null);
+    } catch { /* error handled by context */ }
   };
 
   return (
@@ -242,7 +248,7 @@ export function CrmStoresPage() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => updateStore(store.id, { active: !store.active })}
+                onClick={async () => { try { await updateStore(store.id, { active: !store.active }); } catch {} }}
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-white/10 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/20 transition-all"
               >
                 {store.active ? (

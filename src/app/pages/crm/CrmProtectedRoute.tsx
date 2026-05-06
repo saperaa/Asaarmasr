@@ -8,7 +8,15 @@ interface Props {
 }
 
 export function CrmProtectedRoute({ children, adminOnly = false }: Props) {
-  const { crmUser } = useCrm();
+  const { crmUser, loading } = useCrm();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen luxury-page-gradient flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#D4AF37]/30 border-t-[#D4AF37] animate-spin" />
+      </div>
+    );
+  }
 
   if (!crmUser) {
     return <Navigate to="/crm" replace />;

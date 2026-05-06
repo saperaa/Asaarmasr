@@ -8,7 +8,13 @@ export interface CrmUser {
   id: string;
   name: string;
   email: string;
-  password: string; // plain-text for demo; hash in production
+  role: CrmRole;
+}
+
+export interface NewCrmUser {
+  name: string;
+  email: string;
+  password: string;
   role: CrmRole;
 }
 
@@ -40,231 +46,246 @@ export interface Order {
   createdAt: string;
 }
 
-// ─── Seed data ────────────────────────────────────────────────────────────────
+export type GoldKarat = "24K" | "22K" | "21K" | "18K" | "14K";
 
-const SEED_USERS: CrmUser[] = [
-  { id: "u1", name: "Admin User", email: "admin@asaarmasr.com", password: "admin123", role: "admin" },
-  { id: "u2", name: "Shipper One", email: "shipper@asaarmasr.com", password: "ship123", role: "shipper" },
-];
-
-const SEED_STORES: Store[] = [
-  {
-    id: "s1",
-    name_en: "Cairo Gold Center",
-    name_ar: "مركز القاهرة للذهب",
-    address_en: "12 Tahrir Square, Downtown Cairo",
-    address_ar: "١٢ ميدان التحرير، وسط القاهرة",
-    phone: "+20 2 2345 6789",
-    city_en: "Cairo",
-    city_ar: "القاهرة",
-    imageUrl: "",
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "s2",
-    name_en: "Alexandria Luxury Jewels",
-    name_ar: "مجوهرات الإسكندرية الفاخرة",
-    address_en: "5 Corniche Road, Alexandria",
-    address_ar: "٥ طريق الكورنيش، الإسكندرية",
-    phone: "+20 3 4567 8901",
-    city_en: "Alexandria",
-    city_ar: "الإسكندرية",
-    imageUrl: "",
-    active: true,
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const SEED_ORDERS: Order[] = [
-  {
-    id: "o1",
-    customerName: "Ahmed Hassan",
-    customerEmail: "ahmed@example.com",
-    product: "Gold Bars 24K",
-    quantity: 2,
-    totalEGP: 8570,
-    status: "pending",
-    storeId: "s1",
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "o2",
-    customerName: "Sara Mohamed",
-    customerEmail: "sara@example.com",
-    product: "Gold Coins 21K",
-    quantity: 5,
-    totalEGP: 18745,
-    status: "processing",
-    storeId: "s2",
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-  },
-  {
-    id: "o3",
-    customerName: "Khaled Nour",
-    customerEmail: "khaled@example.com",
-    product: "Gold Jewelry 18K",
-    quantity: 1,
-    totalEGP: 3214,
-    status: "shipped",
-    storeId: "s1",
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-  },
-  {
-    id: "o4",
-    customerName: "Nadia Farouk",
-    customerEmail: "nadia@example.com",
-    product: "Gold Bars 24K",
-    quantity: 3,
-    totalEGP: 12855,
-    status: "delivered",
-    storeId: "s2",
-    createdAt: new Date(Date.now() - 345600000).toISOString(),
-  },
-];
-
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-
-const LS_STORES = "crm_stores";
-const LS_ORDERS = "crm_orders";
-const LS_SESSION = "crm_session";
-
-function loadStores(): Store[] {
-  try {
-    const raw = localStorage.getItem(LS_STORES);
-    return raw ? JSON.parse(raw) : SEED_STORES;
-  } catch {
-    return SEED_STORES;
-  }
+export interface Product {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  karat: GoldKarat;
+  description_en: string;
+  description_ar: string;
+  imageUrl: string;
+  active: boolean;
+  createdAt: string;
 }
 
-function loadOrders(): Order[] {
-  try {
-    const raw = localStorage.getItem(LS_ORDERS);
-    return raw ? JSON.parse(raw) : SEED_ORDERS;
-  } catch {
-    return SEED_ORDERS;
-  }
-}
+// ─── API helper ───────────────────────────────────────────────────────────────
 
-function loadSession(): CrmUser | null {
-  try {
-    const raw = sessionStorage.getItem(LS_SESSION);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
+const API = (import.meta.env.VITE_API_URL as string | undefined) || "http://localhost:3001";
+const TOKEN_KEY = "crm_token";
+
+async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+  token?: string | null
+): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API}${path}`, {
+    ...options,
+    headers: { ...headers, ...(options.headers as Record<string, string> | undefined) },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { message?: string }).message || `HTTP ${res.status}`);
   }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 interface CrmContextType {
-  // Auth
+  loading: boolean;
   crmUser: CrmUser | null;
-  crmLogin: (email: string, password: string) => boolean;
+  crmLogin: (email: string, password: string) => Promise<boolean>;
   crmLogout: () => void;
 
-  // Stores
   stores: Store[];
-  addStore: (store: Omit<Store, "id" | "createdAt">) => void;
-  updateStore: (id: string, updates: Partial<Store>) => void;
-  deleteStore: (id: string) => void;
+  addStore: (store: Omit<Store, "id" | "createdAt">) => Promise<void>;
+  updateStore: (id: string, updates: Partial<Store>) => Promise<void>;
+  deleteStore: (id: string) => Promise<void>;
 
-  // Orders
   orders: Order[];
-  updateOrderStatus: (id: string, status: OrderStatus) => void;
+  updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
 
-  // Users (admin only)
+  products: Product[];
+  addProduct: (product: Omit<Product, "id" | "createdAt">) => Promise<void>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+
   crmUsers: CrmUser[];
-  addCrmUser: (user: Omit<CrmUser, "id">) => void;
-  deleteCrmUser: (id: string) => void;
+  addCrmUser: (user: NewCrmUser) => Promise<void>;
+  deleteCrmUser: (id: string) => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextType>({
+  loading: true,
   crmUser: null,
-  crmLogin: () => false,
+  crmLogin: async () => false,
   crmLogout: () => {},
   stores: [],
-  addStore: () => {},
-  updateStore: () => {},
-  deleteStore: () => {},
+  addStore: async () => {},
+  updateStore: async () => {},
+  deleteStore: async () => {},
   orders: [],
-  updateOrderStatus: () => {},
+  updateOrderStatus: async () => {},
+  products: [],
+  addProduct: async () => {},
+  updateProduct: async () => {},
+  deleteProduct: async () => {},
   crmUsers: [],
-  addCrmUser: () => {},
-  deleteCrmUser: () => {},
+  addCrmUser: async () => {},
+  deleteCrmUser: async () => {},
 });
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
-  const [crmUser, setCrmUser] = useState<CrmUser | null>(loadSession);
-  const [stores, setStores] = useState<Store[]>(loadStores);
-  const [orders, setOrders] = useState<Order[]>(loadOrders);
-  const [crmUsers, setCrmUsers] = useState<CrmUser[]>(SEED_USERS);
+  const [token, setToken] = useState<string | null>(null);
+  const [crmUser, setCrmUser] = useState<CrmUser | null>(null);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [crmUsers, setCrmUsers] = useState<CrmUser[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Persist stores & orders
+  // Restore session on mount
   useEffect(() => {
-    localStorage.setItem(LS_STORES, JSON.stringify(stores));
-  }, [stores]);
+    const savedToken = sessionStorage.getItem(TOKEN_KEY);
+    if (!savedToken) {
+      setLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    localStorage.setItem(LS_ORDERS, JSON.stringify(orders));
-  }, [orders]);
+    (async () => {
+      try {
+        const { user } = await apiFetch<{ user: CrmUser }>("/api/auth/me", {}, savedToken);
+        setToken(savedToken);
+        setCrmUser(user);
+
+        const [storesData, ordersData, productsData] = await Promise.all([
+          apiFetch<Store[]>("/api/stores", {}, savedToken),
+          apiFetch<Order[]>("/api/orders", {}, savedToken),
+          apiFetch<Product[]>("/api/products", {}, savedToken),
+        ]);
+        setStores(storesData);
+        setOrders(ordersData);
+        setProducts(productsData);
+
+        if (user.role === "admin") {
+          const usersData = await apiFetch<CrmUser[]>("/api/users", {}, savedToken);
+          setCrmUsers(usersData);
+        }
+      } catch {
+        sessionStorage.removeItem(TOKEN_KEY);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   // Auth
-  const crmLogin = (email: string, password: string): boolean => {
-    const found = crmUsers.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-    if (!found) return false;
-    setCrmUser(found);
+  const crmLogin = async (email: string, password: string): Promise<boolean> => {
     try {
-      sessionStorage.setItem(LS_SESSION, JSON.stringify(found));
-    } catch {}
-    return true;
+      const { token: newToken, user } = await apiFetch<{ token: string; user: CrmUser }>(
+        "/api/auth/login",
+        { method: "POST", body: JSON.stringify({ email, password }) }
+      );
+      setToken(newToken);
+      setCrmUser(user);
+      sessionStorage.setItem(TOKEN_KEY, newToken);
+
+      const [storesData, ordersData, productsData] = await Promise.all([
+        apiFetch<Store[]>("/api/stores", {}, newToken),
+        apiFetch<Order[]>("/api/orders", {}, newToken),
+        apiFetch<Product[]>("/api/products", {}, newToken),
+      ]);
+      setStores(storesData);
+      setOrders(ordersData);
+      setProducts(productsData);
+
+      if (user.role === "admin") {
+        const usersData = await apiFetch<CrmUser[]>("/api/users", {}, newToken);
+        setCrmUsers(usersData);
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const crmLogout = () => {
     setCrmUser(null);
-    try {
-      sessionStorage.removeItem(LS_SESSION);
-    } catch {}
+    setToken(null);
+    setStores([]);
+    setOrders([]);
+    setProducts([]);
+    setCrmUsers([]);
+    sessionStorage.removeItem(TOKEN_KEY);
   };
 
   // Stores
-  const addStore = (store: Omit<Store, "id" | "createdAt">) => {
-    const newStore: Store = {
-      ...store,
-      id: `s${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    setStores((prev) => [...prev, newStore]);
+  const addStore = async (store: Omit<Store, "id" | "createdAt">) => {
+    const created = await apiFetch<Store>("/api/stores", {
+      method: "POST",
+      body: JSON.stringify(store),
+    }, token);
+    setStores((prev) => [...prev, created]);
   };
 
-  const updateStore = (id: string, updates: Partial<Store>) => {
-    setStores((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+  const updateStore = async (id: string, updates: Partial<Store>) => {
+    const updated = await apiFetch<Store>(`/api/stores/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    }, token);
+    setStores((prev) => prev.map((s) => (s.id === id ? updated : s)));
   };
 
-  const deleteStore = (id: string) => {
+  const deleteStore = async (id: string) => {
+    await apiFetch<void>(`/api/stores/${id}`, { method: "DELETE" }, token);
     setStores((prev) => prev.filter((s) => s.id !== id));
   };
 
   // Orders
-  const updateOrderStatus = (id: string, status: OrderStatus) => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+  const updateOrderStatus = async (id: string, status: OrderStatus) => {
+    const updated = await apiFetch<Order>(`/api/orders/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }, token);
+    setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
+  };
+
+  // Products
+  const addProduct = async (product: Omit<Product, "id" | "createdAt">) => {
+    const created = await apiFetch<Product>("/api/products", {
+      method: "POST",
+      body: JSON.stringify(product),
+    }, token);
+    setProducts((prev) => [...prev, created]);
+  };
+
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
+    const updated = await apiFetch<Product>(`/api/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    }, token);
+    setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+  };
+
+  const deleteProduct = async (id: string) => {
+    await apiFetch<void>(`/api/products/${id}`, { method: "DELETE" }, token);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
   // CRM Users
-  const addCrmUser = (user: Omit<CrmUser, "id">) => {
-    setCrmUsers((prev) => [...prev, { ...user, id: `u${Date.now()}` }]);
+  const addCrmUser = async (user: NewCrmUser) => {
+    const created = await apiFetch<CrmUser>("/api/users", {
+      method: "POST",
+      body: JSON.stringify(user),
+    }, token);
+    setCrmUsers((prev) => [...prev, created]);
   };
 
-  const deleteCrmUser = (id: string) => {
+  const deleteCrmUser = async (id: string) => {
+    await apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }, token);
     setCrmUsers((prev) => prev.filter((u) => u.id !== id));
   };
 
   return (
     <CrmContext.Provider
       value={{
+        loading,
         crmUser,
         crmLogin,
         crmLogout,
@@ -274,6 +295,10 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         deleteStore,
         orders,
         updateOrderStatus,
+        products,
+        addProduct,
+        updateProduct,
+        deleteProduct,
         crmUsers,
         addCrmUser,
         deleteCrmUser,

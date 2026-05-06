@@ -172,7 +172,7 @@ export function CrmOrdersPage() {
                             {transitions.map((t) => (
                               <button
                                 key={t}
-                                onClick={() => updateOrderStatus(order.id, t)}
+                                onClick={async () => { try { await updateOrderStatus(order.id, t); } catch {} }}
                                 className={cn(
                                   "px-2.5 py-1 rounded-lg text-xs font-medium border transition-all hover:opacity-80 capitalize whitespace-nowrap",
                                   t === "cancelled"

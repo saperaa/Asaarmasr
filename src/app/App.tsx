@@ -28,6 +28,7 @@ import { CrmLoginPage } from "./pages/crm/CrmLoginPage";
 import { CrmProtectedRoute } from "./pages/crm/CrmProtectedRoute";
 import { CrmDashboardPage } from "./pages/crm/CrmDashboardPage";
 import { CrmOrdersPage } from "./pages/crm/CrmOrdersPage";
+import { CrmProductsPage } from "./pages/crm/CrmProductsPage";
 import { CrmStoresPage } from "./pages/crm/CrmStoresPage";
 import { CrmUsersPage } from "./pages/crm/CrmUsersPage";
 import { StoresSection } from "./components/stores-section";
@@ -260,6 +261,14 @@ export default function App() {
             element={
               <CrmProtectedRoute>
                 <CrmOrdersPage />
+              </CrmProtectedRoute>
+            }
+          />
+          <Route
+            path="/crm/products"
+            element={
+              <CrmProtectedRoute adminOnly>
+                <CrmProductsPage />
               </CrmProtectedRoute>
             }
           />
