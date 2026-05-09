@@ -14,8 +14,8 @@ const ADMIN_TRANSITIONS = {
 
 const SHIPPER_TRANSITIONS = {
   pending: ["cancelled"],
-  processing: ["cancelled"],
-  shipped: ["cancelled"],
+  processing: ["shipped", "cancelled"],
+  shipped: ["delivered", "cancelled"],
   delivered: [],
   cancelled: [],
 };
@@ -31,7 +31,7 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.patch("/:id/status", requireAuth, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, trackingNumber } = req.body;
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found." });
 
@@ -45,6 +45,7 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
     }
 
     order.status = status;
+    if (trackingNumber !== undefined) order.tracking_number = trackingNumber;
     await order.save();
     res.json(order);
   } catch (err) {

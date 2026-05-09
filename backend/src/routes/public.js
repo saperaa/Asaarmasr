@@ -26,19 +26,30 @@ router.get("/stores", async (_req, res) => {
 
 router.post("/orders", async (req, res) => {
   try {
-    const { customerName, customerEmail, product, quantity, totalEGP, storeId } = req.body;
+    const {
+      customerName, customerEmail, product, quantity, totalEGP, storeId,
+      shippingAddress, shippingCity, shippingPhone, shippingNotes,
+    } = req.body;
+
     if (!customerName || !customerEmail || !product || !quantity || !totalEGP || !storeId) {
       return res.status(400).json({ message: "All order fields are required." });
     }
+    if (!shippingAddress || !shippingCity || !shippingPhone) {
+      return res.status(400).json({ message: "Shipping address, city, and phone are required." });
+    }
 
     const order = await Order.create({
-      customer_name: customerName,
-      customer_email: customerEmail,
+      customer_name:    customerName,
+      customer_email:   customerEmail,
       product,
       quantity,
-      total_egp: totalEGP,
-      status: "pending",
-      store_id: storeId,
+      total_egp:        totalEGP,
+      status:           "pending",
+      store_id:         storeId,
+      shipping_address: shippingAddress,
+      shipping_city:    shippingCity,
+      shipping_phone:   shippingPhone,
+      shipping_notes:   shippingNotes || "",
     });
 
     res.status(201).json(order);

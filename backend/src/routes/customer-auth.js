@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Customer = require("../models/Customer");
+const Order = require("../models/Order");
 
 const router = express.Router();
 
@@ -71,6 +72,24 @@ router.post("/login", async (req, res) => {
     res.json({ token, user: { id: customer.id, name: customer.name, email: customer.email } });
   } catch (err) {
     res.status(500).json({ message: "Login failed." });
+  }
+});
+
+// GET /api/customer/orders — fetch this customer's orders by their JWT email
+router.get("/orders", async (req, res) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Authentication required." });
+  }
+  try {
+    const decoded = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    if (decoded.type !== "customer") {
+      return res.status(401).json({ message: "Invalid token type." });
+    }
+    const orders = await Order.find({ customer_email: decoded.email }).sort({ created_at: -1 });
+    res.json(orders);
+  } catch {
+    res.status(401).json({ message: "Invalid or expired token." });
   }
 });
 

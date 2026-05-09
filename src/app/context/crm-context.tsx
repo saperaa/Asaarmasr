@@ -43,6 +43,11 @@ export interface Order {
   totalEGP: number;
   status: OrderStatus;
   storeId: string;
+  trackingNumber: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingPhone: string;
+  shippingNotes: string;
   createdAt: string;
 }
 
@@ -98,7 +103,7 @@ interface CrmContextType {
   deleteStore: (id: string) => Promise<void>;
 
   orders: Order[];
-  updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  updateOrderStatus: (id: string, status: OrderStatus, trackingNumber?: string) => Promise<void>;
 
   products: Product[];
   addProduct: (product: Omit<Product, "id" | "createdAt">) => Promise<void>;
@@ -120,7 +125,7 @@ const CrmContext = createContext<CrmContextType>({
   updateStore: async () => {},
   deleteStore: async () => {},
   orders: [],
-  updateOrderStatus: async () => {},
+  updateOrderStatus: async (_id, _status, _tracking?) => {},
   products: [],
   addProduct: async () => {},
   updateProduct: async () => {},
@@ -173,6 +178,18 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       }
     })();
   }, []);
+
+  // Poll orders every 30 s while logged in
+  useEffect(() => {
+    if (!token) return;
+    const id = setInterval(async () => {
+      try {
+        const fresh = await apiFetch<Order[]>("/api/orders", {}, token);
+        setOrders(fresh);
+      } catch {}
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [token]);
 
   // Auth
   const crmLogin = async (email: string, password: string): Promise<boolean> => {
@@ -238,10 +255,12 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Orders
-  const updateOrderStatus = async (id: string, status: OrderStatus) => {
+  const updateOrderStatus = async (id: string, status: OrderStatus, trackingNumber?: string) => {
+    const body: Record<string, unknown> = { status };
+    if (trackingNumber !== undefined) body.trackingNumber = trackingNumber;
     const updated = await apiFetch<Order>(`/api/orders/${id}/status`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     }, token);
     setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
   };
