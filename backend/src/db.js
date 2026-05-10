@@ -8,7 +8,7 @@ const Product = require("./models/Product");
 
 async function initDb() {
   const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/asaarmasr";
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, { tls: true, tlsAllowInvalidCertificates: false });
   console.log("Connected to MongoDB");
 
   // Seed each collection independently so adding new ones never re-runs old ones
