@@ -11,6 +11,7 @@ const usersRoutes = require("./routes/users");
 const publicRoutes = require("./routes/public");
 const customerAuthRoutes = require("./routes/customer-auth");
 const productsRoutes = require("./routes/products");
+const blogRoutes = require("./routes/blog");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/customer", customerAuthRoutes);
 app.use("/api/products", productsRoutes);
+app.use("/api/blog", blogRoutes);
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 

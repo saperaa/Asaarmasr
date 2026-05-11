@@ -2,6 +2,7 @@ const express = require("express");
 const Store = require("../models/Store");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const BlogPost = require("../models/BlogPost");
 
 const router = express.Router();
 
@@ -55,6 +56,25 @@ router.post("/orders", async (req, res) => {
     res.status(201).json(order);
   } catch (err) {
     res.status(500).json({ message: "Failed to create order." });
+  }
+});
+
+router.get("/blog", async (_req, res) => {
+  try {
+    const posts = await BlogPost.find({ published: true }).sort({ created_at: -1 });
+    res.json(posts);
+  } catch {
+    res.status(500).json({ message: "Failed to fetch blog posts." });
+  }
+});
+
+router.get("/blog/:id", async (req, res) => {
+  try {
+    const post = await BlogPost.findOne({ _id: req.params.id, published: true });
+    if (!post) return res.status(404).json({ message: "Article not found." });
+    res.json(post);
+  } catch {
+    res.status(404).json({ message: "Article not found." });
   }
 });
 

@@ -23,8 +23,7 @@ const buyGoldItems = [
 const simpleLinksAfter: SimpleNav[] = [
   { kind: "link", href: "/#currency", en: "Currency", ar: "العملات" },
   { kind: "link", href: "/#calculator", en: "Calculator", ar: "الحاسبة" },
-  { kind: "link", href: "/#learn", en: "Learn", ar: "تعلّم" },
-  { kind: "link", href: "/#blog", en: "Blog", ar: "المدونة" },
+  { kind: "link", href: "/blog", en: "Blog", ar: "المدونة" },
   { kind: "link", href: "/#faq", en: "FAQ", ar: "الأسئلة الشائعة" },
   { kind: "link", href: "/#contact", en: "Contact", ar: "تواصل معنا" },
 ];
@@ -45,14 +44,20 @@ export function Header() {
   const sectionId = (href: string) => href.replace(/^\/?#/, "");
 
   const onHome = pathname === "/";
+  const blogActive = pathname.startsWith("/blog");
+
+  const isActive = (href: string) => {
+    if (href === "/blog") return blogActive;
+    return onHome && activeSection === sectionId(href);
+  };
 
   const desktopNavClass = (href: string) =>
-    cn("nav-gold-link", onHome && activeSection === sectionId(href) && "nav-gold-link-active");
+    cn("nav-gold-link", isActive(href) && "nav-gold-link-active");
 
   const mobileNavClass = (href: string) =>
     cn(
       "py-2.5 transition-all duration-300",
-      onHome && activeSection === sectionId(href)
+      isActive(href)
         ? "text-[#FFD700] drop-shadow-[0_0_12px_rgba(212,175,55,0.35)]"
         : "text-white/90 hover:text-[#FFD700]"
     );
@@ -169,11 +174,17 @@ export function Header() {
               </div>
             </div>
 
-            {simpleLinksAfter.map((link) => (
-              <a key={link.href} href={link.href} className={desktopNavClass(link.href)}>
-                {lang === "ar" ? link.ar : link.en}
-              </a>
-            ))}
+            {simpleLinksAfter.map((link) =>
+              link.href.startsWith("/#") ? (
+                <a key={link.href} href={link.href} className={desktopNavClass(link.href)}>
+                  {lang === "ar" ? link.ar : link.en}
+                </a>
+              ) : (
+                <Link key={link.href} to={link.href} className={desktopNavClass(link.href)}>
+                  {lang === "ar" ? link.ar : link.en}
+                </Link>
+              )
+            )}
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -256,16 +267,17 @@ export function Header() {
                 </div>
               </div>
 
-              {simpleLinksAfter.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className={mobileNavClass(link.href)}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {lang === "ar" ? link.ar : link.en}
-                </a>
-              ))}
+              {simpleLinksAfter.map((link) =>
+                link.href.startsWith("/#") ? (
+                  <a key={link.href} href={link.href} className={mobileNavClass(link.href)} onClick={() => setMobileMenuOpen(false)}>
+                    {lang === "ar" ? link.ar : link.en}
+                  </a>
+                ) : (
+                  <Link key={link.href} to={link.href} className={mobileNavClass(link.href)} onClick={() => setMobileMenuOpen(false)}>
+                    {lang === "ar" ? link.ar : link.en}
+                  </Link>
+                )
+              )}
             </nav>
           </div>
         )}

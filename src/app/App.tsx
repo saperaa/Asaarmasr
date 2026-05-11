@@ -10,7 +10,6 @@ import { PriceChart } from "./components/price-chart";
 import { GoldCalculator } from "./components/gold-calculator";
 import { NewsSection } from "./components/news-section";
 import { CurrencyExchange } from "./components/currency-exchange";
-import { EducationalArticles } from "./components/educational-articles";
 import { FaqSection } from "./components/faq-section";
 import { BlogPosts } from "./components/blog-posts";
 import { Footer } from "./components/footer";
@@ -31,6 +30,9 @@ import { CrmOrdersPage } from "./pages/crm/CrmOrdersPage";
 import { CrmProductsPage } from "./pages/crm/CrmProductsPage";
 import { CrmStoresPage } from "./pages/crm/CrmStoresPage";
 import { CrmUsersPage } from "./pages/crm/CrmUsersPage";
+import { CrmBlogPage } from "./pages/crm/CrmBlogPage";
+import { BlogListPage } from "./pages/BlogListPage";
+import { BlogArticlePage } from "./pages/BlogArticlePage";
 import { StoresSection } from "./components/stores-section";
 
 const INTRO_STORAGE_KEY = "asaarMasrIntroDismissed";
@@ -180,13 +182,6 @@ function AppInner() {
             </ScrollReveal>
           </section>
 
-          {/* Educational Articles */}
-          <section id="learn" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <ScrollReveal>
-              <EducationalArticles />
-            </ScrollReveal>
-          </section>
-
           {/* Blog Posts */}
           <section id="blog" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <ScrollReveal>
@@ -245,6 +240,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<AppInner />} />
           <Route path="/buy-gold" element={<BuyGoldPage />} />
+          <Route path="/blog" element={<BlogListPage />} />
+          <Route path="/blog/:id" element={<BlogArticlePage />} />
 
           {/* CRM Routes */}
           <Route path="/crm" element={<CrmLoginPage />} />
@@ -285,6 +282,14 @@ export default function App() {
             element={
               <CrmProtectedRoute adminOnly>
                 <CrmUsersPage />
+              </CrmProtectedRoute>
+            }
+          />
+          <Route
+            path="/crm/blog"
+            element={
+              <CrmProtectedRoute adminOnly>
+                <CrmBlogPage />
               </CrmProtectedRoute>
             }
           />

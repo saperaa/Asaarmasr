@@ -6,6 +6,7 @@ import {
   ShoppingBag,
   Users,
   Package,
+  FileText,
   LogOut,
   Menu,
   X,
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
   { label: "Products",  href: "/crm/products",  icon: <Package className="w-4 h-4" />, adminOnly: true },
   { label: "Stores",    href: "/crm/stores",    icon: <Store className="w-4 h-4" />, adminOnly: true },
   { label: "Users",     href: "/crm/users",     icon: <Users className="w-4 h-4" />, adminOnly: true },
+  { label: "Blog",      href: "/crm/blog",      icon: <FileText className="w-4 h-4" />, adminOnly: true },
 ];
 
 export function CrmLayout({ children }: { children: React.ReactNode }) {

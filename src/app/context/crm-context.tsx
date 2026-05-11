@@ -53,6 +53,32 @@ export interface Order {
 
 export type GoldKarat = "24K" | "22K" | "21K" | "18K" | "14K";
 
+export interface BlogPost {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  author: string;
+  readTime: string;
+  imageUrl: string;
+  trend: "up" | "neutral" | "down";
+  published: boolean;
+  createdAt: string;
+}
+
+export interface NewBlogPost {
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  author: string;
+  read_time: string;
+  image_url: string;
+  trend: "up" | "neutral" | "down";
+  published: boolean;
+}
+
 export interface Product {
   id: string;
   name_en: string;
@@ -113,6 +139,11 @@ interface CrmContextType {
   crmUsers: CrmUser[];
   addCrmUser: (user: NewCrmUser) => Promise<void>;
   deleteCrmUser: (id: string) => Promise<void>;
+
+  blogPosts: BlogPost[];
+  addBlogPost: (post: NewBlogPost) => Promise<void>;
+  updateBlogPost: (id: string, updates: Partial<NewBlogPost>) => Promise<void>;
+  deleteBlogPost: (id: string) => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextType>({
@@ -133,6 +164,10 @@ const CrmContext = createContext<CrmContextType>({
   crmUsers: [],
   addCrmUser: async () => {},
   deleteCrmUser: async () => {},
+  blogPosts: [],
+  addBlogPost: async () => {},
+  updateBlogPost: async () => {},
+  deleteBlogPost: async () => {},
 });
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
@@ -142,6 +177,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [crmUsers, setCrmUsers] = useState<CrmUser[]>([]);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Restore session on mount
@@ -168,8 +204,12 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         setProducts(productsData);
 
         if (user.role === "admin") {
-          const usersData = await apiFetch<CrmUser[]>("/api/users", {}, savedToken);
+          const [usersData, blogData] = await Promise.all([
+            apiFetch<CrmUser[]>("/api/users", {}, savedToken),
+            apiFetch<BlogPost[]>("/api/blog", {}, savedToken),
+          ]);
           setCrmUsers(usersData);
+          setBlogPosts(blogData);
         }
       } catch {
         sessionStorage.removeItem(TOKEN_KEY);
@@ -212,8 +252,12 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       setProducts(productsData);
 
       if (user.role === "admin") {
-        const usersData = await apiFetch<CrmUser[]>("/api/users", {}, newToken);
+        const [usersData, blogData] = await Promise.all([
+          apiFetch<CrmUser[]>("/api/users", {}, newToken),
+          apiFetch<BlogPost[]>("/api/blog", {}, newToken),
+        ]);
         setCrmUsers(usersData);
+        setBlogPosts(blogData);
       }
 
       return true;
@@ -229,6 +273,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     setOrders([]);
     setProducts([]);
     setCrmUsers([]);
+    setBlogPosts([]);
     sessionStorage.removeItem(TOKEN_KEY);
   };
 
@@ -301,6 +346,28 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     setCrmUsers((prev) => prev.filter((u) => u.id !== id));
   };
 
+  // Blog posts
+  const addBlogPost = async (post: NewBlogPost) => {
+    const created = await apiFetch<BlogPost>("/api/blog", {
+      method: "POST",
+      body: JSON.stringify(post),
+    }, token);
+    setBlogPosts((prev) => [created, ...prev]);
+  };
+
+  const updateBlogPost = async (id: string, updates: Partial<NewBlogPost>) => {
+    const updated = await apiFetch<BlogPost>(`/api/blog/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    }, token);
+    setBlogPosts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+  };
+
+  const deleteBlogPost = async (id: string) => {
+    await apiFetch<void>(`/api/blog/${id}`, { method: "DELETE" }, token);
+    setBlogPosts((prev) => prev.filter((p) => p.id !== id));
+  };
+
   return (
     <CrmContext.Provider
       value={{
@@ -321,6 +388,10 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
         crmUsers,
         addCrmUser,
         deleteCrmUser,
+        blogPosts,
+        addBlogPost,
+        updateBlogPost,
+        deleteBlogPost,
       }}
     >
       {children}
