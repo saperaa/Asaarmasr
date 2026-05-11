@@ -1,9 +1,28 @@
-import { Facebook, Twitter, Instagram, Linkedin, AlertCircle } from "lucide-react";
+import { Facebook, Twitter, Instagram, Linkedin, AlertCircle, Github, Mail } from "lucide-react";
+import { useNavigate, useLocation } from "react-router";
 import { LuxuryIcon } from "./luxury-icon";
 
 const BRAND_MARK = `${import.meta.env.BASE_URL}gold.png`;
 
 export function Footer() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleQuickLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    e.preventDefault();
+    
+    // If we're on the home page, just scroll
+    if (location.pathname === '/') {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      // Navigate to home page first, then scroll
+      navigate('/');
+      setTimeout(() => {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
   return (
     <footer className="relative z-[1] mt-20 border-t border-[#D4AF37]/12 bg-[#030303]/90 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -54,22 +73,38 @@ export function Footer() {
             <h3 className="font-heading font-semibold tracking-wide text-white mb-4">Quick Links</h3>
             <ul className="space-y-2.5 font-sans text-sm">
               <li>
-                <a href="#home" className="text-white/50 hover:text-[#FFD700] transition-colors">
+                <a 
+                  href="#home" 
+                  className="text-white/50 hover:text-[#FFD700] transition-colors cursor-pointer"
+                  onClick={(e) => handleQuickLinkClick(e, 'home')}
+                >
                   Home
                 </a>
               </li>
               <li>
-                <a href="#prices" className="text-white/50 hover:text-[#FFD700] transition-colors">
+                <a 
+                  href="#prices" 
+                  className="text-white/50 hover:text-[#FFD700] transition-colors cursor-pointer"
+                  onClick={(e) => handleQuickLinkClick(e, 'prices')}
+                >
                   Gold Prices
                 </a>
               </li>
               <li>
-                <a href="#calculator" className="text-white/50 hover:text-[#FFD700] transition-colors">
+                <a 
+                  href="#calculator" 
+                  className="text-white/50 hover:text-[#FFD700] transition-colors cursor-pointer"
+                  onClick={(e) => handleQuickLinkClick(e, 'calculator')}
+                >
                   Calculator
                 </a>
               </li>
               <li>
-                <a href="#news" className="text-white/50 hover:text-[#FFD700] transition-colors">
+                <a 
+                  href="#news" 
+                  className="text-white/50 hover:text-[#FFD700] transition-colors cursor-pointer"
+                  onClick={(e) => handleQuickLinkClick(e, 'news')}
+                >
                   News
                 </a>
               </li>
@@ -80,14 +115,16 @@ export function Footer() {
             <h3 className="font-heading font-semibold tracking-wide text-white mb-4">Follow Us</h3>
             <div className="flex gap-3">
               {[
-                { icon: Facebook, href: "#" },
-                { icon: Twitter, href: "#" },
-                { icon: Instagram, href: "#" },
-                { icon: Linkedin, href: "#" },
-              ].map(({ icon, href }, i) => (
+                { icon: Linkedin, href: "https://www.linkedin.com/in/mohamedsapera/", label: "LinkedIn" },
+                { icon: Github, href: "https://github.com/saperaa", label: "GitHub" },
+                { icon: Mail, href: "mailto:mohamedalaa0911@gmail.com", label: "Email" },
+              ].map(({ icon, href, label }, i) => (
                 <a
                   key={i}
                   href={href}
+                  target={href.startsWith('http') ? "_blank" : undefined}
+                  rel={href.startsWith('http') ? "noopener noreferrer" : undefined}
+                  aria-label={label}
                   className="group/so flex h-11 w-11 items-center justify-center rounded-xl border border-[#D4AF37]/20 bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:border-[#D4AF37]/45 hover:shadow-[0_0_24px_rgba(212,175,55,0.2)]"
                 >
                   <LuxuryIcon icon={icon} size={20} interactive={false} className="group-hover/so:scale-110" />

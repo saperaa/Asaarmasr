@@ -6,6 +6,7 @@ const Store = require("./models/Store");
 const Order = require("./models/Order");
 const Product = require("./models/Product");
 const BlogPost = require("./models/BlogPost");
+const Customer = require("./models/Customer");
 
 async function initDb() {
   const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/asaarmasr";
@@ -18,6 +19,7 @@ async function initDb() {
   if (await Store.countDocuments() === 0) await seedStoresAndOrders();
   if (await Product.countDocuments() === 0) await seedProducts();
   if (await BlogPost.countDocuments() === 0) await seedBlogPosts();
+  if (await Customer.countDocuments() === 0) await seedCustomers();
 }
 
 async function seedUsers() {
@@ -54,10 +56,54 @@ async function seedStoresAndOrders() {
   });
 
   await Order.create([
-    { customer_name: "Ahmed Hassan", customer_email: "ahmed@example.com", product: "Gold Bars 24K",    quantity: 2, total_egp: 8570,  status: "pending",    store_id: cairo._id },
-    { customer_name: "Sara Mohamed", customer_email: "sara@example.com",  product: "Gold Coins 21K",   quantity: 5, total_egp: 18745, status: "processing", store_id: alex._id },
-    { customer_name: "Khaled Nour",  customer_email: "khaled@example.com",product: "Gold Jewelry 18K", quantity: 1, total_egp: 3214,  status: "shipped",    store_id: cairo._id },
-    { customer_name: "Nadia Farouk", customer_email: "nadia@example.com", product: "Gold Bars 24K",    quantity: 3, total_egp: 12855, status: "delivered",  store_id: alex._id },
+    { 
+      customer_name: "Mohamed Ali", 
+      customer_email: "mohamed.ali@example.com", 
+      product: "Gold Coins 21K",    
+      quantity: 5, 
+      total_egp: 18745, 
+      status: "pending",    
+      store_id: cairo._id,
+      shipping_address: "15 Nasr Street, Nasr City",
+      shipping_city: "Cairo",
+      shipping_phone: "+20 10 1234 5678"
+    },
+    { 
+      customer_name: "Mohamed Ali", 
+      customer_email: "mohamed.ali@example.com",  
+      product: "Gold Bars 24K",   
+      quantity: 2, 
+      total_egp: 8570, 
+      status: "processing", 
+      store_id: alex._id,
+      shipping_address: "15 Nasr Street, Nasr City",
+      shipping_city: "Cairo",
+      shipping_phone: "+20 10 1234 5678"
+    },
+    { 
+      customer_name: "Fatima Hassan",  
+      customer_email: "fatima.hassan@example.com",
+      product: "Gold Jewelry 18K", 
+      quantity: 1, 
+      total_egp: 3214,  
+      status: "shipped",    
+      store_id: cairo._id,
+      shipping_address: "22 El Horreya Road, Sidi Gaber",
+      shipping_city: "Alexandria",
+      shipping_phone: "+20 11 9876 5432"
+    },
+    { 
+      customer_name: "Fatima Hassan", 
+      customer_email: "fatima.hassan@example.com", 
+      product: "Gold Bars 24K",    
+      quantity: 3, 
+      total_egp: 12855, 
+      status: "delivered",  
+      store_id: alex._id,
+      shipping_address: "22 El Horreya Road, Sidi Gaber",
+      shipping_city: "Alexandria",
+      shipping_phone: "+20 11 9876 5432"
+    },
   ]);
   console.log("Seeded stores and orders");
 }
@@ -159,6 +205,22 @@ async function seedBlogPosts() {
     },
   ]);
   console.log("Seeded blog posts");
+}
+
+async function seedCustomers() {
+  await Customer.create([
+    {
+      name: "Mohamed Ali",
+      email: "mohamed.ali@example.com",
+      password_hash: bcrypt.hashSync("customer123", 10),
+    },
+    {
+      name: "Fatima Hassan",
+      email: "fatima.hassan@example.com",
+      password_hash: bcrypt.hashSync("customer123", 10),
+    },
+  ]);
+  console.log("Seeded customers");
 }
 
 module.exports = { initDb };

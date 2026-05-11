@@ -122,7 +122,7 @@ export function CrmDashboardPage() {
             <tbody className="divide-y divide-white/[0.04]">
               {recentOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-5 py-3.5 text-[#D4AF37]/70 font-mono text-xs">#{order.id}</td>
+                  <td className="px-5 py-3.5 text-[#D4AF37]/70 font-mono text-xs">#{order.id.slice(-8)}</td>
                   <td className="px-5 py-3.5 text-white/80">{order.customerName}</td>
                   <td className="px-5 py-3.5 text-white/60">{order.product}</td>
                   <td className="px-5 py-3.5 text-white/80 font-medium">
