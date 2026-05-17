@@ -10,3 +10,7 @@ crm.db
 backend/node_modules/
 backend/.adminjs/
 .claude/
+*.rar
+ppt_env/
+create_presentation.py
+__pycache__/
